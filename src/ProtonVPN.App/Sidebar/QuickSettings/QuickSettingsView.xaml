@@ -516,13 +516,13 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
                                             <Grid.RowDefinitions>
                                                 <RowDefinition />
                                             </Grid.RowDefinitions>
-                                            
+
                                             <TextBlock Grid.Row="0" Grid.Column="0" 
                                                        Style="{StaticResource FeatureTitleText}"
                                                        Text="{translations:Loc NetShield}"
                                                        HorizontalAlignment="Left"
                                                        Margin="0,1,0,0" />
-                                        
+
                                             <plans:BusinessBadge Grid.Row="0" Grid.Column="1" 
                                                                  Width="88" Height="24"
                                                                  HorizontalAlignment="Right"
@@ -772,6 +772,91 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
                 </quickSettings:QuickSettingButton.Icon>
                 <quickSettings:QuickSettingButton.ActiveIcon>
                     <icons:ArrowsSwitch Style="{StaticResource Icon}" Foreground="{StaticResource InteractionNormAccentBrushColor}" />
+                </quickSettings:QuickSettingButton.ActiveIcon>
+            </quickSettings:QuickSettingButton>
+            <quickSettings:QuickSettingButton x:Name="SplitTunnelingToggle"
+                                  Style="{StaticResource QuickSettingsToggle}"
+                                  IsChecked="{Binding ShowSplitTunnelingPopup, Mode=TwoWay}"
+                                  IsEnabled="{Binding ElementName=SplitTunnelingPopup, Path=IsOpen, Converter={StaticResource InvertedBoolConverter}}"
+                                  Active="{Binding IsSplitTunnelingOnButtonOn}"
+                                  Number="{Binding SplitTunnelingButtonNumber}"
+                                  AutomationProperties.AutomationId="{StaticResource SplitTunnelingButton}"
+                                  ToolTip="{translations:Loc SplitTunneling}"
+                                  Visibility="{Binding IsSplitTunnelingVisible, Converter={StaticResource BoolToVis}}" Margin="2,0,0,0">
+                <quickSettings:QuickSettingButton.Popup>
+                    <Popup x:Name="SplitTunnelingPopup"
+               AllowsTransparency="True"
+               StaysOpen="False"
+               HorizontalOffset="-5"
+               PlacementTarget="{Binding ElementName=QuickMenuContainer}"
+               VerticalOffset="0"
+               IsOpen="{Binding IsChecked, ElementName=SplitTunnelingToggle, Mode=TwoWay}">
+                        <Grid UseLayoutRounding="True">
+                            <Polygon Style="{StaticResource Triangle}">
+                                <Polygon.Margin>
+                                    <MultiBinding Converter="{StaticResource PopupArrowPositionConverter}">
+                                        <Binding Path="TotalButtons" />
+                                        <Binding Path="SplitTunnelingButtonNumber" />
+                                        <Binding ElementName="QuickMenuContainer" Path="Width" />
+                                    </MultiBinding>
+                                </Polygon.Margin>
+                            </Polygon>
+                            <Polygon Style="{StaticResource BorderCover}">
+                                <Polygon.Margin>
+                                    <MultiBinding Converter="{StaticResource PopupArrowPositionConverter}">
+                                        <Binding Path="TotalButtons" />
+                                        <Binding Path="SplitTunnelingButtonNumber" />
+                                        <Binding ElementName="QuickMenuContainer" Path="Width" />
+                                    </MultiBinding>
+                                </Polygon.Margin>
+                            </Polygon>
+                            <Border Style="{StaticResource PopupBorder}">
+                                <ScrollViewer Style="{StaticResource PopupScroll}">
+                                    <StackPanel>
+                                        <TextBlock Style="{StaticResource FeatureTitleText}"
+                                       Text="{translations:Loc SplitTunneling}" />
+                                        <TextBlock Style="{StaticResource FeatureInfoText}"
+                                       Text="{translations:Loc QuickSettings_lbl_SplitTunnelingInfo}" />
+                                        <TextBlock Style="{StaticResource ReadMoreText}">
+                                <Hyperlink Command="{Binding SplitTunnelingLearnMoreCommand}">
+                                    <Run Text="{translations:Loc QuickSettings_btn_LearnMore}" />
+                                </Hyperlink>
+                                        </TextBlock>
+                                        <quickSettings:SettingButton Style="{StaticResource FeatureOnOffButton}"
+                                                         Command="{Binding SplitTunnelingOffCommand}"
+                                                         Active="{Binding IsSplitTunnelingOffButtonOn}"
+                                                         AutomationProperties.AutomationId="{StaticResource SplitTunnelingOffButton}"
+                                                         Title="{translations:Loc QuickSettings_btn_SplitTunnelingOff}">
+                                            <quickSettings:SettingButton.Icon>
+                                                <icons:ArrowUp Style="{StaticResource Icon}" />
+                                            </quickSettings:SettingButton.Icon>
+                                        </quickSettings:SettingButton>
+                                        <quickSettings:SettingButton Style="{StaticResource FeatureOnOffButton}"
+                                                         Command="{Binding SplitTunnelingOnCommand}"
+                                                         Active="{Binding IsSplitTunnelingOnButtonOn}"
+                                                         IsTurnOnButton="True"
+                                                         AutomationProperties.AutomationId="{StaticResource SplitTunnelingOnButton}"
+                                                         Disabled="{Binding IsPaidUser, Converter={StaticResource InvertedBoolConverter}}"
+                                                         Title="{translations:Loc QuickSettings_btn_SplitTunnelingOn}">
+                                            <quickSettings:SettingButton.Icon>
+                                                <icons:SplitTunneling Style="{StaticResource Icon}" />
+                                            </quickSettings:SettingButton.Icon>
+                                        </quickSettings:SettingButton>
+                                        <StackPanel Orientation="Horizontal" 
+                                        Margin="0,10,0,0" 
+                                        Visibility="{Binding HasSplitTunnelingValue, Converter={StaticResource BoolToVis}}">
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </Border>
+                        </Grid>
+                    </Popup>
+                </quickSettings:QuickSettingButton.Popup>
+                <quickSettings:QuickSettingButton.Icon>
+                    <icons:SplitTunneling Style="{StaticResource Icon}" Foreground="{StaticResource TextNormBrushColor}" Background="#00000000" />
+                </quickSettings:QuickSettingButton.Icon>
+                <quickSettings:QuickSettingButton.ActiveIcon>
+                    <icons:SplitTunneling Style="{StaticResource Icon}" Foreground="{StaticResource InteractionNormAccentBrushColor}" />
                 </quickSettings:QuickSettingButton.ActiveIcon>
             </quickSettings:QuickSettingButton>
         </UniformGrid>

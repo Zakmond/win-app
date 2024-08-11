@@ -26,7 +26,7 @@
         <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
         <comment>This is a comment</comment>
     </data>
-                
+    
     There are any number of "resheader" rows that contain simple 
     name/value pairs.
     
@@ -2583,6 +2583,15 @@ Please follow &lt;Hyperlink Command="{Binding OpenArticleCommand}"&gt;&lt;Run Te
   <data name="QuickSettings_lbl_NetShieldStatsDataSavedTooltip" xml:space="preserve">
     <value>Estimated size of ads, trackers, and malware that NetShield has blocked.</value>
   </data>
+  <data name="QuickSettings_lbl_SplitTunnelingInfo" xml:space="preserve">
+    <value>Route selected apps through the VPN while allowing others to access the internet directly.</value>
+</data>
+  <data name="QuickSettings_btn_SplitTunnelingOff" xml:space="preserve">
+    <value>Split Tunneling Off</value>
+</data>
+  <data name="QuickSettings_btn_SplitTunnelingOn" xml:space="preserve">
+    <value>Split Tunneling On</value>
+</data>
   <data name="PortForwarding" xml:space="preserve">
     <value>Port Forwarding</value>
   </data>
@@ -2595,6 +2604,9 @@ Please follow &lt;Hyperlink Command="{Binding OpenArticleCommand}"&gt;&lt;Run Te
   </data>
   <data name="SecureCore" xml:space="preserve">
     <value>Secure Core</value>
+  </data>
+  <data name="SplitTunneling" xml:space="preserve">
+    <value>Split Tunneling</value>
   </data>
   <data name="Settings_Advanced_lbl_btn_LearnMore" xml:space="preserve">
     <value>Learn more</value>

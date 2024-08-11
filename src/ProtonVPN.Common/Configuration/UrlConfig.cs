@@ -40,10 +40,10 @@ namespace ProtonVPN.Common.Configuration
 
         [Required]
         public string ApiUrl { get; set; }
-        
+
         [Required]
         public string TlsReportUrl { get; set; }
-        
+
         [Required]
         public string HelpUrl { get; set; }
 
@@ -94,6 +94,9 @@ namespace ProtonVPN.Common.Configuration
 
         [Required]
         public string PortForwardingRisksUrl { get; set; }
+
+        [Required]
+        public string AboutSplitTunnelingUrl { get; set; }
 
         [Required]
         public string InvoicesUrl { get; set; }

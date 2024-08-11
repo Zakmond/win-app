@@ -22,6 +22,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using Caliburn.Micro;
 using GalaSoft.MvvmLight.Command;
+using Newtonsoft.Json.Linq;
 using ProtonVPN.Common.Extensions;
 using ProtonVPN.Common.NetShield;
 using ProtonVPN.Common.Vpn;
@@ -39,6 +40,7 @@ using ProtonVPN.PortForwarding;
 using ProtonVPN.PortForwarding.ActivePorts;
 using ProtonVPN.Settings;
 using ProtonVPN.Translations;
+using Windows.ApplicationModel.VoiceCommands;
 using static ProtonVPN.Common.Extensions.ExponentialExtensions;
 
 namespace ProtonVPN.Sidebar.QuickSettings
@@ -60,6 +62,7 @@ namespace ProtonVPN.Sidebar.QuickSettings
         private readonly IUserStorage _userStorage;
         private readonly IActiveUrls _urls;
         private readonly IModals _modals;
+        private readonly IDialogs _dialogs;
         private readonly IVpnManager _vpnManager;
         private readonly IPortForwardingManager _portForwardingManager;
 
@@ -76,6 +79,7 @@ namespace ProtonVPN.Sidebar.QuickSettings
         public ICommand NetShieldLearnMoreCommand { get; }
         public ICommand SecureCoreLearnMoreCommand { get; }
         public ICommand PortForwardingLearnMoreCommand { get; }
+        public ICommand SplitTunnelingLearnMoreCommand { get; }
 
         public ICommand EnableSoftKillSwitchCommand { get; }
         public ICommand EnableHardKillSwitchCommand { get; }
@@ -87,6 +91,9 @@ namespace ProtonVPN.Sidebar.QuickSettings
 
         public ICommand PortForwardingOnCommand { get; }
         public ICommand PortForwardingOffCommand { get; }
+
+        public ICommand SplitTunnelingOnCommand { get; }
+        public ICommand SplitTunnelingOffCommand { get; }
 
         public ICommand ShowSecureCoreUpsellModalCommand { get; }
         public ICommand ShowNetshieldUpsellModalCommand { get; }
@@ -113,12 +120,18 @@ namespace ProtonVPN.Sidebar.QuickSettings
         public bool IsPortForwardingOnButtonOn => _appSettings.PortForwardingEnabled;
         public bool IsPortForwardingOffButtonOn => !_appSettings.PortForwardingEnabled;
 
+        public bool IsSplitTunnelingOnButtonOn => _appSettings.SplitTunnelingEnabled;
+        public bool IsSplitTunnelingOffButtonOn => !_appSettings.SplitTunnelingEnabled;
+
         public bool IsPortForwardingVisible => _appSettings.PortForwardingInQuickSettings &&
                                                _appSettings.FeaturePortForwardingEnabled &&
+                                               (_userStorage.GetUser().Paid() || !_appSettings.FeatureFreeRescopeEnabled);
+        public bool IsSplitTunnelingVisible => _appSettings.ShowNonStandardPortsToFreeUsers ||
                                                (_userStorage.GetUser().Paid() || !_appSettings.FeatureFreeRescopeEnabled);
 
         public int KillSwitchButtonNumber => _appSettings.FeatureNetShieldEnabled ? 2 : 1;
         public int PortForwardingButtonNumber => KillSwitchButtonNumber + 1;
+        public int SplitTunnelingButtonNumber => PortForwardingButtonNumber + 1;
 
         public int TotalButtons => 2 + (IsNetShieldVisible ? 1 : 0) + (IsPortForwardingVisible ? 1 : 0);
 
@@ -170,7 +183,7 @@ namespace ProtonVPN.Sidebar.QuickSettings
             get => _netShieldStatsNumOfTrackingUrlsBlocked;
             set => Set(ref _netShieldStatsNumOfTrackingUrlsBlocked, value);
         }
-        
+
         private string _netShieldStatsLabelOfTrackingUrlsBlocked;
         public string NetShieldStatsLabelOfTrackingUrlsBlocked
         {
@@ -199,6 +212,13 @@ namespace ProtonVPN.Sidebar.QuickSettings
             set => Set(ref _showPortForwardingPopup, value);
         }
 
+        private bool _showSplitTunnelingPopup;
+        public bool ShowSplitTunnelingPopup
+        {
+            get => _showSplitTunnelingPopup;
+            set => Set(ref _showSplitTunnelingPopup, value);
+        }
+
         public bool HasPortForwardingValue => ActivePortViewModel.HasPortForwardingValue;
 
         private bool _showOnboardingStep;
@@ -211,6 +231,7 @@ namespace ProtonVPN.Sidebar.QuickSettings
         public bool ShowPortForwardingWarningLabel => PortForwardingWarningViewModel.IsToShowPortForwardingWarningLabel;
 
         public QuickSettingsViewModel(
+            IDialogs dialogs,
             IAppSettings appSettings,
             IUserStorage userStorage,
             IActiveUrls urls,
@@ -220,6 +241,7 @@ namespace ProtonVPN.Sidebar.QuickSettings
             PortForwardingActivePortViewModel activePortViewModel,
             PortForwardingWarningViewModel portForwardingWarningViewModel)
         {
+            _dialogs = dialogs;
             _modals = modals;
             _urls = urls;
             _userStorage = userStorage;
@@ -235,6 +257,7 @@ namespace ProtonVPN.Sidebar.QuickSettings
             NetShieldLearnMoreCommand = new RelayCommand(OpenNetShieldArticleAction);
             KillSwitchLearnMoreCommand = new RelayCommand(OpenKillSwitchArticleAction);
             PortForwardingLearnMoreCommand = new RelayCommand(OpenPortForwardingArticleAction);
+            SplitTunnelingLearnMoreCommand = new RelayCommand(OpenSplitTunnelingArticleAction);
 
             SecureCoreOffCommand = new RelayCommand(TurnOffSecureCoreActionAsync);
             SecureCoreOnCommand = new RelayCommand(TurnOnSecureCoreActionAsync);
@@ -249,6 +272,9 @@ namespace ProtonVPN.Sidebar.QuickSettings
 
             PortForwardingOffCommand = new RelayCommand(TurnOffPortForwardingActionAsync);
             PortForwardingOnCommand = new RelayCommand(TurnOnPortForwardingActionAsync);
+
+            SplitTunnelingOnCommand = new RelayCommand(TurnOnSplitTunnelingActionAsync);
+            SplitTunnelingOffCommand = new RelayCommand(TurnOffSplitTunnelingActionAsync);
 
             ShowSecureCoreUpsellModalCommand = new RelayCommand(ShowSecureCoreUpsellModalAction);
             ShowNetshieldUpsellModalCommand = new RelayCommand(ShowNetshieldUpsellModalAction);
@@ -371,6 +397,7 @@ namespace ProtonVPN.Sidebar.QuickSettings
                 ShowNetShieldPopup = false;
                 ShowKillSwitchPopup = false;
                 ShowPortForwardingPopup = false;
+                ShowSplitTunnelingPopup = false;
             }
 
             bool newIsConnected = e.State.Status == VpnStatus.Connected;
@@ -463,6 +490,8 @@ namespace ProtonVPN.Sidebar.QuickSettings
             {
                 await ReconnectAsync();
             }
+            NotifyOfPropertyChange(nameof(IsSplitTunnelingOffButtonOn));
+            NotifyOfPropertyChange(nameof(IsSplitTunnelingOnButtonOn));
         }
 
         private async void EnableHardKillSwitchActionAsync()
@@ -484,6 +513,9 @@ namespace ProtonVPN.Sidebar.QuickSettings
             {
                 await ReconnectAsync();
             }
+
+            NotifyOfPropertyChange(nameof(IsSplitTunnelingOffButtonOn));
+            NotifyOfPropertyChange(nameof(IsSplitTunnelingOnButtonOn));
         }
 
         private async void TurnOnPortForwardingActionAsync()
@@ -508,6 +540,11 @@ namespace ProtonVPN.Sidebar.QuickSettings
             ShowNetShieldPopup = false;
         }
 
+        private void HideSplitTunnelingPopup()
+        {
+            ShowSplitTunnelingPopup = false;
+        }
+
         private void TurnOffNetShieldAction()
         {
             HideNetShieldPopup();
@@ -524,6 +561,47 @@ namespace ProtonVPN.Sidebar.QuickSettings
         {
             HideNetShieldPopup();
             await EnableNetShieldMode(2);
+        }
+
+        private async void TurnOnSplitTunnelingActionAsync()
+        {
+            HideSplitTunnelingPopup();
+            await EnableSplitTunneling();
+        }
+
+        private async void TurnOffSplitTunnelingActionAsync()
+        {
+            HideSplitTunnelingPopup();
+            await DisableSplitTunneling();
+        }
+
+
+        private async Task DisableSplitTunneling()
+        {
+            // disable split tunneling
+            // async reconnect
+            _appSettings.SplitTunnelingEnabled = false;
+            await ReconnectAsync();
+            NotifyOfPropertyChange(nameof(IsSplitTunnelingOffButtonOn));
+            NotifyOfPropertyChange(nameof(IsSplitTunnelingOnButtonOn));
+
+        }
+
+        private async Task EnableSplitTunneling()
+        {
+            if (_appSettings.KillSwitchMode != Common.KillSwitch.KillSwitchMode.Off)
+            {
+                bool? result = _dialogs.ShowQuestionAsync(Translation.Get("Dialogs_SplitTunnelWarning_msg")).Result;
+                if (!result.HasValue || !result.Value)
+                {
+                    return;
+                }
+                DisableKillSwitchAction();
+            }
+            _appSettings.SplitTunnelingEnabled = true;
+            await ReconnectAsync();
+            NotifyOfPropertyChange(nameof(IsSplitTunnelingOffButtonOn));
+            NotifyOfPropertyChange(nameof(IsSplitTunnelingOnButtonOn));
         }
 
         private async Task EnableNetShieldMode(int mode)
@@ -562,6 +640,11 @@ namespace ProtonVPN.Sidebar.QuickSettings
         private void OpenPortForwardingArticleAction()
         {
             _urls.AboutPortForwardingUrl.Open();
+        }
+        
+        public void OpenSplitTunnelingArticleAction()
+        {
+            _urls.AboutSplitTunnelingUrl.Open();
         }
 
         private async void ShowSecureCoreUpsellModalAction()
