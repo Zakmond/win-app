@@ -17,7 +17,9 @@
  * along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Net.NetworkInformation;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using ProtonVPN.Common.Vpn;
 using ProtonVPN.ConnectionInfo;
 using ProtonVPN.Core.MVVM;
@@ -25,11 +27,14 @@ using ProtonVPN.Core.Servers;
 using ProtonVPN.Core.Servers.Models;
 using ProtonVPN.Core.Servers.Name;
 using ProtonVPN.Core.Vpn;
+using System;
+using System.Threading.Tasks;
 
 namespace ProtonVPN.Servers
 {
     public class ServerItemViewModel : ViewModel, IServerListItem
     {
+        private static readonly ConcurrentDictionary<string, Task<long>> _latencyTasks = new ConcurrentDictionary<string, Task<long>>();
         private bool _connecting;
         private bool _connected;
         private bool _showIp = true;
@@ -45,6 +50,8 @@ namespace ProtonVPN.Servers
             AssignServer(server);
             SetServerFeatures(server);
             ConnectionInfoViewModel = new ConnectionInfoViewModel(server);
+            GetLatencyAsync();
+
         }
 
         public ConnectionInfoViewModel ConnectionInfoViewModel { get; }
@@ -71,6 +78,7 @@ namespace ProtonVPN.Servers
 
         public string Id => Server.Id;
         public string Name => Server.Name;
+        public string Latency => Server.Latency + " ms";
 
         public IName ConnectionName { get; set; }
 
@@ -146,6 +154,45 @@ namespace ProtonVPN.Servers
             ShowIp = server.Tier > ServerTiers.Free;
         }
 
+        private async void GetLatencyAsync()
+        {   
+
+            if (Maintenance)
+            {
+                Server.Latency = 999;
+                return;
+            }
+            if (!_latencyTasks.TryGetValue(Server.Domain, out Task<long> latencyTask))
+            {
+                latencyTask = PingServerAsync(Server.Domain);
+                _latencyTasks.TryAdd(Server.Domain, latencyTask);
+            }
+
+            Server.Latency = await latencyTask;
+        }
+
+        private async Task<long> PingServerAsync(string domain, int tries = 0)
+        {
+            if (tries == 5)
+            {
+                return 999;
+            }
+
+                using (var ping = new Ping())
+                {
+                PingReply reply = await ping.SendPingAsync(domain);
+
+                    if (reply.Status == IPStatus.Success)
+                    {
+                        return reply.RoundtripTime;
+                    }
+                    else
+                    {
+                        await PingServerAsync(domain, tries + 1);
+                        return 999;
+                    }
+                }
+            }
         protected void SetDisconnected()
         {
             Connecting = false;

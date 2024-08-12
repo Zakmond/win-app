@@ -41,6 +41,7 @@ namespace ProtonVPN.Core.Servers.Models
         public LocationResponse LocationResponse { get; }
         public string ExitIp { get; set; }
         public string GatewayName { get; set; }
+        public long Latency { get; set; }
         public IReadOnlyList<PhysicalServer> Servers { get; }
 
         public Server(

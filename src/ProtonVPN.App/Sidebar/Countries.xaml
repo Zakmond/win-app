@@ -277,6 +277,12 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
             <Setter Property="Height" Value="20"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
+        <Style x:Key="SortingIcon" TargetType="UserControl" BasedOn="{StaticResource InfoCircle}">
+            <Setter Property="Foreground" Value="{StaticResource TextHintBrushColor}" />
+            <Setter Property="Width" Value="23"/>
+            <Setter Property="Height" Value="17"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
     </UserControl.Resources>
 
     <Grid>
@@ -363,7 +369,7 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
-            </Border>          
+            </Border>
         </Grid>
 
         <wpf:CustomListView x:Name="ListView"
@@ -523,13 +529,41 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
                     </Border>
                 </DataTemplate>
                 <DataTemplate DataType="{x:Type servers:CountrySeparatorViewModel}">
+                    <!-- Plus Locations label -->
                     <Border x:Name="Border" Height="48">
                         <Grid Width="310" Margin="27,3,0,3" HorizontalAlignment="Left">
                             <TextBlock x:Name="CountryLabel"
                                        Text="{Binding Name}"
                                        Style="{StaticResource CountrySeparator}"
                                        TextTrimming="CharacterEllipsis" />
+
                             <DockPanel Margin="27,0" HorizontalAlignment="Right">
+                                <Button Style="{StaticResource ClearStyleButton}"
+                                        HorizontalAlignment="Right"
+                                        Margin="0,0,10,0"
+                                        Command="{Binding DataContext.SortPremiumList, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}"
+                                        Background="Transparent"
+                                        BorderBrush="Transparent">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Grid>
+                                                <icons:LatencySorting x:Name="FirstIcon" Style="{StaticResource SortingIcon}" />
+                                                <icons:AlphabetSorting x:Name="SecondIcon" Style="{StaticResource SortingIcon}" Visibility="Collapsed" />
+                                            </Grid>
+                                            <ControlTemplate.Triggers>
+                                                <DataTrigger Binding="{Binding DataContext.SortValue, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}" Value="0">
+                                                    <Setter TargetName="FirstIcon" Property="Visibility" Value="Visible" />
+                                                    <Setter TargetName="SecondIcon" Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding DataContext.SortValue, RelativeSource={RelativeSource AncestorType={x:Type UserControl}}}" Value="1">
+                                                    <Setter TargetName="FirstIcon" Property="Visibility" Value="Collapsed" />
+                                                    <Setter TargetName="SecondIcon" Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+
                                 <countryFeatures:CountryFeaturesPopupView
                                     DataContext="{Binding CountryFeaturesPopupViewModel}" />
                             </DockPanel>
@@ -608,9 +642,9 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
                                            Text="{Binding Name}"
                                            ToolTip="{Binding Name}"
                                            HorizontalAlignment="Left"
-                                           VerticalAlignment="Center"
+                                  VerticalAlignment="Center"
                                            Padding="0,0,0,2"
-                                           TextTrimming="CharacterEllipsis"
+                                  TextTrimming="CharacterEllipsis"
                                            FontSize="16">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
@@ -731,10 +765,16 @@ along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
                                 <sidebar:ServerFeatures Features="{Binding Features}"
                                                         Style="{StaticResource ServerFeatures}" />
                             </StackPanel>
-                            <Label Style="{StaticResource City}" 
+                            <StackPanel>
+                                <Label Style="{StaticResource City}" 
                                    FontSize="14"
                                    FontWeight="Normal"
                                    Content="{Binding Server.City}" />
+                                <Label Style="{StaticResource City}" 
+                                   FontSize="14"
+                                   FontWeight="Normal"
+                                   Content="{Binding Latency}" />
+                            </StackPanel>
                             <Button Style="{StaticResource UpgradeButton}"
                                     Command="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ListView}}, Path=DataContext.Upgrade}"
                                     CommandParameter="{Binding}" />

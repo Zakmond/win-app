@@ -17,6 +17,7 @@
  * along with ProtonVPN.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -92,6 +93,7 @@ namespace ProtonVPN.Sidebar
             ConnectCountry = new RelayCommand<IServerCollection>(ConnectCountryActionAsync);
             Expand = new RelayCommand<IServerCollection>(ExpandAction);
             ClearSearchCommand = new RelayCommand(ClearSearchAction);
+            SortPremiumList = new RelayCommand(SortPremiumListAction);
         }
 
         public QuickSettingsViewModel QuickSettingsViewModel { get; }
@@ -103,6 +105,14 @@ namespace ProtonVPN.Sidebar
         public ICommand ConnectCountry { get; }
         public ICommand Expand { get; set; }
         public ICommand ClearSearchCommand { get; }
+        public ICommand SortPremiumList {  get; }
+
+        private int _sortValue = 0; // 0 by alphabet, 1 by ping
+
+        public int SortValue 
+        { get => _sortValue;
+          set { } 
+        }
 
         private bool _searchNotEmpty;
 
@@ -330,8 +340,20 @@ namespace ProtonVPN.Sidebar
             }
         }
 
+        private void CollapseAll()
+        {
+            foreach (IServerListItem item in Items.ToList())
+            {
+                if (item is ServersByCountryViewModel serversByCountry)
+                {
+                    CollapseCollection(serversByCountry);
+                }
+            }
+        }
+
         private void ExpandScCountry(string countryCode)
         {
+
             ServersByExitNodeViewModel countryRow = Items.OfType<ServersByExitNodeViewModel>()
                 .FirstOrDefault(c => c.CountryCode.Equals(countryCode));
             if (countryRow != null)
@@ -353,6 +375,101 @@ namespace ProtonVPN.Sidebar
                     CollapseCollection(serverCollection);
                 }
             });
+        }
+
+        private void SortPremiumListAction()
+        {
+            CollapseAll();
+
+
+            if (_sortValue == 1)
+            {
+                SortItemsByAlphabet();
+                _sortValue = 0;
+            }
+            else if (_sortValue == 0)
+            {
+                SortItemsByLowestLatency();
+                _sortValue = 1;
+            }
+        }
+
+        private void SortItemsByAlphabet()
+        {
+            var nonCountryItems = Items
+                .Select((item, index) => new { Item = item, Index = index })
+                .Where(x => x.Item is not ServersByCountryViewModel)
+                .ToList();
+
+            List<ServersByCountryViewModel> sortedCountryItems = Items
+                .OfType<ServersByCountryViewModel>() 
+                .OrderBy(country => country.Name) 
+                .ToList();
+
+            List<IServerListItem> newItems = new List<IServerListItem>(Items.Count);
+
+            int countryIndex = 0;
+            int nonCountryIndex = 0;
+
+            for (int i = 0; i < Items.Count; i++)
+            {
+                if (nonCountryItems.Count > nonCountryIndex && nonCountryItems[nonCountryIndex].Index == i)
+                {
+                    newItems.Add(nonCountryItems[nonCountryIndex].Item);
+                    nonCountryIndex++;
+                }
+                else if (sortedCountryItems.Count > countryIndex)
+                {
+                    newItems.Add(sortedCountryItems[countryIndex]);
+                    countryIndex++;
+                }
+            }
+
+            Items = new ObservableCollection<IServerListItem>(newItems);
+        }
+
+        private void SortItemsByLowestLatency()
+        {
+            var nonCountryItems = Items
+                .Select((item, index) => new { Item = item, Index = index })
+                .Where(x => x.Item is not ServersByCountryViewModel)
+                .ToList();
+
+            List<ServersByCountryViewModel> sortedCountryItems = Items
+                .OfType<ServersByCountryViewModel>() 
+                .Select(country =>
+                {
+                    long minLatency = country.Servers
+                        .OfType<ServerItemViewModel>() 
+                        .Min(server => server.Server.Latency);
+
+                    return new { Country = country, MinLatency = minLatency };
+                })
+                .OrderBy(countryWithLatency => countryWithLatency.MinLatency)
+                .Select(countryWithLatency => countryWithLatency.Country) 
+                .ToList();
+
+            List<IServerListItem> newItems = new List<IServerListItem>(Items.Count);
+
+            int countryIndex = 0;
+            int nonCountryIndex = 0;
+
+            for (int i = 0; i < Items.Count; i++)
+            {
+                if (nonCountryItems.Count > nonCountryIndex && nonCountryItems[nonCountryIndex].Index == i)
+                {
+                    newItems.Add(nonCountryItems[nonCountryIndex].Item);
+                    nonCountryIndex++;
+                }
+                else if (sortedCountryItems.Count > countryIndex)
+                {
+                    newItems.Add(sortedCountryItems[countryIndex]);
+                    countryIndex++;
+                }
+            }
+
+            Items = new ObservableCollection<IServerListItem>(newItems);
+
         }
 
         private async void ConnectAction(ServerItemViewModel serverItemViewModel)
